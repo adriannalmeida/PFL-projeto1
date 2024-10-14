@@ -43,8 +43,14 @@ cities = Data.List.sort . foldl (\acc (c1, c2, _) -> acc ++ noRepetition c1 acc 
 areAdjacent :: RoadMap -> City -> City -> Bool
 areAdjacent = undefined
 
+isIn :: (City,City,Distance) -> City -> City -> Bool
+isIn (c1, c2, _) x y = if x == c1 && y == c2 then True 
+else False
+
 distance :: RoadMap -> City -> City -> Maybe Distance
-distance = undefined
+distance [] _ _ = Nothing
+distance ((c1, c2, d):xs) s e = if  isIn (c1,c2,d) s e then Just d
+else distance xs s e 
 
 adjacent :: RoadMap -> City -> [(City,Distance)]
 adjacent = undefined
