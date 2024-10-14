@@ -1,4 +1,4 @@
---import qualified Data.List
+import qualified Data.List
 --import qualified Data.Array
 --import qualified Data.Bits
 
@@ -12,9 +12,34 @@ type Distance = Int
 
 type RoadMap = [(City,City,Distance)]
 
-cities :: RoadMap -> [City]
-cities = undefined -- modifiy this line to implement the solution, for each exercise not solved, leave the function definition like this
 
+--versão mega eficiente do chat gpt não entidi um caralho
+{--cities :: RoadMap -> [City]
+cities = foldl (\acc (c1, c2, _) -> addIfNotIn c1 (addIfNotIn c2 acc)) []
+    where
+    addIfNotIn city acc = if city `elem` acc then acc else acc ++ [city]
+--}
+{--sort:: Ord(a) => [a] -> [a]
+sort [] = []
+sort (x:xs) = insert x (sort xs)
+    where 
+        insert y [] = [y]
+        insert y (x:xs) = if y <= x
+        then y : x : xs
+        else x : insert y xs
+--}
+
+{--noRepetition :: City -> [City] -> [City]
+noRepetition x [] = [x]
+noRepetition x (y:ys) = if x == y then []
+    else noRepetition x ys--}
+
+cities :: RoadMap -> [City]
+cities = Data.List.sort . foldl (\acc (c1, c2, _) -> acc ++ noRepetition c1 acc ++ noRepetition c2 acc)[]
+    where noRepetition x acc = if x `elem` acc then [] else [x]
+    
+
+    
 areAdjacent :: RoadMap -> City -> City -> Bool
 areAdjacent = undefined
 
