@@ -59,8 +59,42 @@ else distance xs s e
 adjacent :: RoadMap -> City -> [(City,Distance)]
 adjacent = undefined
 
+
+
+{--Questão ou problema:
+oneWayAdjacent e oneWayDistance são iguais só que não vem tanto para um lado
+como pelo outro. É suposto a função pedida ver para os dois lados ??
+e se sim então aqui preciso mesmo de ter outras funções ??
+
+Literalmente a unica diferença é na oneWayAdjacent que não ver para os dois lados e a 
+oneWayDistance vai chamar esse em vez da original areAdjacent)
+--}
+
+oneWayAdjacent :: RoadMap -> City -> City -> Bool
+oneWayAdjacent [] _ _ = False
+oneWayAdjacent ((c1, c2, _):xs) k z = 
+    if (c1 == k && c2 == z)  then True
+    else oneWayAdjacent xs k z
+
+oneWayDistance :: RoadMap -> City -> City -> Maybe Distance
+oneWayDistance [] _ _ = Nothing
+oneWayDistance ((c1, c2, d):xs) s e = if  oneWayAdjacent [(c1, c2, d)] s e then Just d
+else oneWayDistance xs s e 
+
+dist :: RoadMap -> Path -> Int -> Maybe Distance
+dist [] _ _ = Just 0
+dist rm [_] acc = Just acc
+dist rm [c1, c2] acc = case oneWayDistance rm c1 c2 of
+    Nothing -> Nothing
+    Just d  -> Just (acc + d) 
+dist rm (c1:c2:xs) acc = case oneWayDistance rm c1 c2 of
+    Nothing -> Nothing
+    Just d -> dist rm (c2:xs) (acc+d)
+
+
 pathDistance :: RoadMap -> Path -> Maybe Distance
-pathDistance = undefined
+pathDistance rm city = dist rm city 0
+
 
 rome :: RoadMap -> [City]
 rome = undefined
