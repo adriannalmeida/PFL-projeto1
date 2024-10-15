@@ -70,6 +70,8 @@ Literalmente a unica diferença é na oneWayAdjacent que não ver para os dois l
 oneWayDistance vai chamar esse em vez da original areAdjacent)
 --}
 
+-- juntar o onewaydistance e o one way Adjacent numa só função
+
 oneWayAdjacent :: RoadMap -> City -> City -> Bool
 oneWayAdjacent [] _ _ = False
 oneWayAdjacent ((c1, c2, _):xs) k z = 
@@ -82,7 +84,7 @@ oneWayDistance ((c1, c2, d):xs) s e = if  oneWayAdjacent [(c1, c2, d)] s e then 
 else oneWayDistance xs s e 
 
 dist :: RoadMap -> Path -> Int -> Maybe Distance
-dist [] _ _ = Just 0
+dist [] _ _ = Nothing
 dist rm [_] acc = Just acc
 dist rm [c1, c2] acc = case oneWayDistance rm c1 c2 of
     Nothing -> Nothing
