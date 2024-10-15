@@ -56,8 +56,8 @@ distance [] _ _ = Nothing
 distance ((c1, c2, d):xs) s e = if  areAdjacent [(c1, c2, d)] s e then Just d
 else distance xs s e 
 
-adjacent :: RoadMap -> City -> [(City,Distance)]
-adjacent = undefined
+--adjacent :: RoadMap -> City -> [(City,Distance)]
+--adjacent = undefined
 
 
 
@@ -70,9 +70,8 @@ Literalmente a unica diferença é na oneWayAdjacent que não ver para os dois l
 oneWayDistance vai chamar esse em vez da original areAdjacent)
 --}
 
--- juntar o onewaydistance e o one way Adjacent numa só função
-
-oneWayAdjacent :: RoadMap -> City -> City -> Bool
+-- ok lol é undirected lágrima
+{--oneWayAdjacent :: RoadMap -> City -> City -> Bool
 oneWayAdjacent [] _ _ = False
 oneWayAdjacent ((c1, c2, _):xs) k z = 
     if (c1 == k && c2 == z)  then True
@@ -81,15 +80,15 @@ oneWayAdjacent ((c1, c2, _):xs) k z =
 oneWayDistance :: RoadMap -> City -> City -> Maybe Distance
 oneWayDistance [] _ _ = Nothing
 oneWayDistance ((c1, c2, d):xs) s e = if  oneWayAdjacent [(c1, c2, d)] s e then Just d
-else oneWayDistance xs s e 
+else oneWayDistance xs s e --}
 
 dist :: RoadMap -> Path -> Int -> Maybe Distance
 dist [] _ _ = Nothing
 dist rm [_] acc = Just acc
-dist rm [c1, c2] acc = case oneWayDistance rm c1 c2 of
+dist rm [c1, c2] acc = case distance rm c1 c2 of
     Nothing -> Nothing
     Just d  -> Just (acc + d) 
-dist rm (c1:c2:xs) acc = case oneWayDistance rm c1 c2 of
+dist rm (c1:c2:xs) acc = case distance rm c1 c2 of
     Nothing -> Nothing
     Just d -> dist rm (c2:xs) (acc+d)
 
@@ -101,8 +100,42 @@ pathDistance rm city = dist rm city 0
 rome :: RoadMap -> [City]
 rome = undefined
 
+
+
+-- DEPOIS SUBSTITUIR PELA FUNÇÃO 4
+adjacent :: RoadMap -> City -> [City]
+adjacent rm city = [c2 | (c1, c2, _) <- rm, c1 == city] ++ [c1 | (c1, c2, _) <- rm, c2 == city]
+
+
+-- preciso melhorar not very efficient 
+addToVisited :: [City] -> [City] -> [City]
+addToVisited [] visited = visited 
+addToVisited (x:xs) visited =  if x `elem` visited 
+    then addToVisited xs visited
+    else addToVisited xs (x:visited)
+
+
+scc :: RoadMap -> [City] -> [City] -> Bool
+scc rm [] visited = (length (cities rm)) == (length visited)
+scc rm (city:xs) visited = 
+    let adj = adjacent rm city
+        newVisited = addToVisited adj visited 
+        newToExplore = filter (`notElem` visited) adj ++ xs
+    in scc rm newToExplore newVisited 
+
+-- necessário??
+first :: (City, City, Distance) -> City
+first (c1, _, _) = c1  
+
 isStronglyConnected :: RoadMap -> Bool
-isStronglyConnected = undefined
+isStronglyConnected [] = False
+isStronglyConnected rm = let city = first (head rm)
+    in scc rm [city] [city]
+
+
+
+
+
 
 shortestPath :: RoadMap -> City -> City -> [Path]
 shortestPath = undefined
