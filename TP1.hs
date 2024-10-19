@@ -33,31 +33,52 @@ sort (x:xs) = insert x (sort xs)
 noRepetition x [] = [x]
 noRepetition x (y:ys) = if x == y then []
     else noRepetition x ys--}
+--Function 1
 
 cities :: RoadMap -> [City]
 cities = Data.List.sort . foldl (\acc (c1, c2, _) -> acc ++ noRepetition c1 acc ++ noRepetition c2 acc)[]
     where noRepetition x acc = if x `elem` acc then [] else [x]
     
+{-
+nesta função temos um acumulador que vai de tuplo
+em tuplo e usa de forma recursiva a função noRepetition,
+ou seja concatena o acc, com o no Repetiotion de c1 e c2,
+que só vê se o elemento x que é uma cidade já se encontra 
+na lista acc , se sim retorna uma lista vazia se não retorna
+uma lista só com a cidade em falta.
+-}
 
-    
+
+--Function 2 
+
 areAdjacent :: RoadMap -> City -> City -> Bool
 areAdjacent [] _ _ = False
 areAdjacent ((c1, c2, _):xs) k z = 
     if (c1 == k && c2 == z) || (c1 == z && c2 == k) then True
     else areAdjacent xs k z
 
+
 {--isIn :: City -> City -> City -> City -> Bool
 isIn c1 c2 x y = if x == c1 && y == c2 then True 
 else False--}
 
+--Function 3 
 -- se tiver de cidade 1 a cidade 1 é suporto dar zero ??
 distance :: RoadMap -> City -> City -> Maybe Distance
 distance [] _ _ = Nothing
 distance ((c1, c2, d):xs) s e = if  areAdjacent [(c1, c2, d)] s e then Just d
 else distance xs s e 
 
---adjacent :: RoadMap -> City -> [(City,Distance)]
---adjacent = undefined
+
+--Function 4
+
+adjacent :: RoadMap -> City -> [(City,Distance)]
+adjacent [] _ = []
+adjacent ((c1, c2, d):xs) k 
+    | k== c1 = [(c2, d)]++ adjacent xs k
+    | k== c2 = [(c1, d)]++ adjacent xs k
+    | otherwise = adjacent xs k
+                             
 
 
 
@@ -92,20 +113,21 @@ dist rm (c1:c2:xs) acc = case distance rm c1 c2 of
     Nothing -> Nothing
     Just d -> dist rm (c2:xs) (acc+d)
 
+--Function 5 
 
 pathDistance :: RoadMap -> Path -> Maybe Distance
 pathDistance rm city = dist rm city 0
 
-
+--Function 6 
 rome :: RoadMap -> [City]
 rome = undefined
-
+--Não feita
 
 
 -- DEPOIS SUBSTITUIR PELA FUNÇÃO 4
-adjacent :: RoadMap -> City -> [City]
+{-adjacent :: RoadMap -> City -> [City]
 adjacent rm city = [c2 | (c1, c2, _) <- rm, c1 == city] ++ [c1 | (c1, c2, _) <- rm, c2 == city]
-
+-}
 
 -- preciso melhorar not very efficient 
 addToVisited :: [City] -> [City] -> [City]
@@ -114,7 +136,7 @@ addToVisited (x:xs) visited =  if x `elem` visited
     then addToVisited xs visited
     else addToVisited xs (x:visited)
 
-
+{-
 scc :: RoadMap -> [City] -> [City] -> Bool
 scc rm [] visited = (length (cities rm)) == (length visited)
 scc rm (city:xs) visited = 
@@ -132,7 +154,7 @@ isStronglyConnected [] = False
 isStronglyConnected rm = let city = first (head rm)
     in scc rm [city] [city]
 
-
+-}
 
 
 
@@ -143,10 +165,9 @@ shortestPath = undefined
 travelSales :: RoadMap -> Path
 travelSales = undefined
 
-tspBruteForce :: RoadMap -> Path
-tspBruteForce = undefined -- only for groups of 3 people; groups of 2 people: do not edit this function
 
--- Some graphs to test your work
+
+
 gTest1 :: RoadMap
 gTest1 = [("7","6",1),("8","2",2),("6","5",2),("0","1",4),("2","5",4),("8","6",6),("2","3",7),("7","8",7),("0","7",8),("1","2",8),("3","4",9),("5","4",10),("1","7",11),("3","5",14)]
 
