@@ -181,6 +181,10 @@ isStronglyConnected :: RoadMap -> Bool
 isStronglyConnected [] = False
 isStronglyConnected ((c1,b,c):rm) = let city = first (head rm) in scc rm [city] [city]
 -}
+
+--Function 7 
+--tentei por menos chatgpt
+
 addvisited ::[City] -> [City] -> [City]
 addvisited [] visited = visited
 addvisited (a:adj) visited = 
@@ -195,15 +199,10 @@ sch rm ((a,b,d):xs) citys visited = if ((length (cities rm ))==length visited) t
                                      else sch rm xs citys (addvisited adj visited) 
                                         where adj= map fst ( adjacent rm a )
                                                                              
---tentei por menos chatgpt
-
 isStronglyConnected :: RoadMap -> Bool
 isStronglyConnected [] = False
 isStronglyConnected rm = let cits=cities rm  
                          in sch rm rm cits [] 
-
-
-
 
 
 
