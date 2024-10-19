@@ -154,7 +154,7 @@ rome rm = reverse( map fst ( final (reverse (qsortfirst (degree rm c ) )) ))
 {-adjacent :: RoadMap -> City -> [City]
 adjacent rm city = [c2 | (c1, c2, _) <- rm, c1 == city] ++ [c1 | (c1, c2, _) <- rm, c2 == city]
 -}
-
+{-
 -- preciso melhorar not very efficient 
 addToVisited :: [City] -> [City] -> [City]
 addToVisited [] visited = visited 
@@ -162,14 +162,16 @@ addToVisited (x:xs) visited =  if x `elem` visited
     then addToVisited xs visited
     else addToVisited xs (x:visited)
 
-{-
+
 scc :: RoadMap -> [City] -> [City] -> Bool
-scc rm [] visited = (length (cities rm)) == (length visited)
+scc rm [] visited = (length (cities rm)) == (length visited) --se o tamanho de rm for igual ao dos visited então é scc
 scc rm (city:xs) visited = 
-    let adj = adjacent rm city
-        newVisited = addToVisited adj visited 
-        newToExplore = filter (`notElem` visited) adj ++ xs
-    in scc rm newToExplore newVisited 
+                            let 
+                                adj = map fst (adjacent rm city)
+                                newVisited = addToVisited adj visited 
+                                newToExplore = filter (`notElem` visited) adj ++ xs
+                            in 
+                                scc rm newToExplore newVisited 
 
 -- necessário??
 first :: (City, City, Distance) -> City
@@ -177,10 +179,31 @@ first (c1, _, _) = c1
 
 isStronglyConnected :: RoadMap -> Bool
 isStronglyConnected [] = False
-isStronglyConnected rm = let city = first (head rm)
-    in scc rm [city] [city]
-
+isStronglyConnected ((c1,b,c):rm) = let city = first (head rm) in scc rm [city] [city]
 -}
+addvisited ::[City] -> [City] -> [City]
+addvisited [] visited = visited
+addvisited (a:adj) visited = 
+    if(a `notElem` visited) then [a] ++ (addvisited adj visited)
+    else addvisited adj visited
+                             
+                                                                    
+
+sch :: RoadMap -> RoadMap -> [City] -> [City] -> Bool
+sch rm [] citys visited = if(citys/= visited) then False else True
+sch rm ((a,b,d):xs) citys visited = if ((length (cities rm ))==length visited) then True
+                                     else sch rm xs citys (addvisited adj visited) 
+                                        where adj= map fst ( adjacent rm a )
+                                                                             
+--tentei por menos chatgpt
+
+isStronglyConnected :: RoadMap -> Bool
+isStronglyConnected [] = False
+isStronglyConnected rm = let cits=cities rm  
+                         in sch rm rm cits [] 
+
+
+
 
 
 
