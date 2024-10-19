@@ -33,8 +33,8 @@ sort (x:xs) = insert x (sort xs)
 noRepetition x [] = [x]
 noRepetition x (y:ys) = if x == y then []
     else noRepetition x ys--}
---Function 1
 
+--Function 1
 cities :: RoadMap -> [City]
 cities = Data.List.sort . foldl (\acc (c1, c2, _) -> acc ++ noRepetition c1 acc ++ noRepetition c2 acc)[]
     where noRepetition x acc = if x `elem` acc then [] else [x]
@@ -81,7 +81,6 @@ adjacent ((c1, c2, d):xs) k
                              
 
 
-
 {--Questão ou problema:
 oneWayAdjacent e oneWayDistance são iguais só que não vem tanto para um lado
 como pelo outro. É suposto a função pedida ver para os dois lados ??
@@ -92,6 +91,7 @@ oneWayDistance vai chamar esse em vez da original areAdjacent)
 --}
 
 -- ok lol é undirected lágrima
+
 {--oneWayAdjacent :: RoadMap -> City -> City -> Bool
 oneWayAdjacent [] _ _ = False
 oneWayAdjacent ((c1, c2, _):xs) k z = 
@@ -116,13 +116,39 @@ dist rm (c1:c2:xs) acc = case distance rm c1 c2 of
 --Function 5 
 
 pathDistance :: RoadMap -> Path -> Maybe Distance
-pathDistance rm city = dist rm city 0
+pathDistance rmap city = dist rmap city 0
+
+
 
 --Function 6 
-rome :: RoadMap -> [City]
-rome = undefined
---Não feita
+--  degree -this function return a list of tuples wher first is city and second the degree 
+degree :: RoadMap ->[City] -> [(City, Int)] 
+degree rm [] = []
+degree rm (x:xs) =foldr (\ x -> (++) [(x, length (adjacent rm x))]) [] xs
+    -- [(x, length(adjacent rm x ))] ++ degree rm xs --versão mais inteligente
 
+--this functions order the list by their degree
+qsortsecond :: (City, Int) -> [(City, Int)] -> [(City, Int)]
+qsortsecond x [] = [x]
+qsortsecond x (y:ys)=
+    if (snd x <= snd y)then [x] ++ [y] ++ ys
+    else [y] ++ qsortsecond x ys
+
+qsortfirst ::[(City, Int)] -> [(City, Int)]
+qsortfirst [] = []
+qsortfirst (x:xs) = qsortsecond x (qsortfirst xs) 
+
+-- final-this function just filter the first cities with the highest degree 
+final :: [(City, Int)] -> [(City, Int)]
+final []=[]
+final (x1:x2:xs) = if(snd x1 == snd x2) then [x1] ++ final(x2:xs) else [x1]
+
+-- rome 
+rome :: RoadMap -> [City]
+rome rm = reverse( map fst ( final (reverse (qsortfirst (degree rm c ) )) ))
+        where c =cities rm 
+            
+      
 
 -- DEPOIS SUBSTITUIR PELA FUNÇÃO 4
 {-adjacent :: RoadMap -> City -> [City]
