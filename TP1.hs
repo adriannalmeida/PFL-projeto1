@@ -260,7 +260,7 @@ floydWarshall n adjMatrix = foldl update (adjMatrix, initialPathMatrix n adjMatr
         updatedPath = [((i, j),
                         if dist ! (i, j) <= dist ! (i, k) + dist ! (k, j)
                         then path ! (i, j)
-                        else path ! (i, k)) 
+                        else Just k)  -- fix: update path to use `k` as intermediate
                        | i <- [0..n-1], j <- [0..n-1]]
 
 reconstructPath :: PathMatrix -> Int -> Int -> [Int]  
@@ -293,6 +293,5 @@ gTest1 = [("7","6",1),("8","2",2),("6","5",2),("0","1",4),("2","5",4),("8","6",6
 
 gTest2 :: RoadMap
 gTest2 = [("0","1",10),("0","2",15),("0","3",20),("1","2",35),("1","3",25),("2","3",30)]
-
 gTest3 :: RoadMap -- unconnected graph
 gTest3 = [("0","1",4),("2","3",2)]
