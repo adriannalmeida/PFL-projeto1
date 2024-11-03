@@ -19,40 +19,11 @@ type AdjacencyMatrix = Array(Int,Int) Distance
 type PathMatrix =  Array(Int, Int) (Maybe Int)
 
 
---versão mega eficiente do chat gpt não entidi um caralho
-{--cities :: RoadMap -> [City]
-cities = foldl (\acc (c1, c2, _) -> addIfNotIn c1 (addIfNotIn c2 acc)) []
-    where
-    addIfNotIn city acc = if city `elem` acc then acc else acc ++ [city]
---}
-{--sort:: Ord(a) => [a] -> [a]
-sort [] = []
-sort (x:xs) = insert x (sort xs)
-    where 
-        insert y [] = [y]
-        insert y (x:xs) = if y <= x
-        then y : x : xs
-        else x : insert y xs
---}
-
-{--noRepetition :: City -> [City] -> [City]
-noRepetition x [] = [x]
-noRepetition x (y:ys) = if x == y then []
-    else noRepetition x ys--}
-
 --Function 1
 cities :: RoadMap -> [City]
 cities = Data.List.sort . foldl (\acc (c1, c2, _) -> acc ++ noRepetition c1 acc ++ noRepetition c2 acc)[]
     where noRepetition x acc = if x `elem` acc then [] else [x]
     
-{-
-nesta função temos um acumulador que vai de tuplo
-em tuplo e usa de forma recursiva a função noRepetition,
-ou seja concatena o acc, com o no Repetiotion de c1 e c2,
-que só vê se o elemento x que é uma cidade já se encontra 
-na lista acc , se sim retorna uma lista vazia se não retorna
-uma lista só com a cidade em falta.
--}
 
 
 --Function 2 
@@ -64,12 +35,10 @@ areAdjacent ((c1, c2, _):xs) k z =
     else areAdjacent xs k z
 
 
-{--isIn :: City -> City -> City -> City -> Bool
-isIn c1 c2 x y = if x == c1 && y == c2 then True 
-else False--}
+
 
 --Function 3 
--- se tiver de cidade 1 a cidade 1 é suporto dar zero ??
+
 distance :: RoadMap -> City -> City -> Maybe Distance
 distance [] _ _ = Nothing
 distance ((c1, c2, d):xs) s e = if  areAdjacent [(c1, c2, d)] s e then Just d
@@ -87,27 +56,6 @@ adjacent ((c1, c2, d):xs) k
                              
 
 
-{--Questão ou problema:
-oneWayAdjacent e oneWayDistance são iguais só que não vem tanto para um lado
-como pelo outro. É suposto a função pedida ver para os dois lados ??
-e se sim então aqui preciso mesmo de ter outras funções ??
-
-Literalmente a unica diferença é na oneWayAdjacent que não ver para os dois lados e a 
-oneWayDistance vai chamar esse em vez da original areAdjacent)
---}
-
--- ok lol é undirected lágrima
-
-{--oneWayAdjacent :: RoadMap -> City -> City -> Bool
-oneWayAdjacent [] _ _ = False
-oneWayAdjacent ((c1, c2, _):xs) k z = 
-    if (c1 == k && c2 == z)  then True
-    else oneWayAdjacent xs k z
-
-oneWayDistance :: RoadMap -> City -> City -> Maybe Distance
-oneWayDistance [] _ _ = Nothing
-oneWayDistance ((c1, c2, d):xs) s e = if  oneWayAdjacent [(c1, c2, d)] s e then Just d
-else oneWayDistance xs s e --}
 
 --Function 5 
 
@@ -126,11 +74,11 @@ pathDistance rmap city = dist rmap city 0
 
 
 --Function 6 
---  degree -this function return a list of tuples wher first is city and second the degree 
+
 degree :: RoadMap ->[City] -> [(City, Int)] 
 degree rm [] = []
 degree rm (x:xs) =foldr (\ x -> (++) [(x, length (adjacent rm x))]) [] xs
-    -- [(x, length(adjacent rm x ))] ++ degree rm xs --versão mais inteligente
+
 
 --this functions order the list by their degree
 qsortsecond :: (City, Int) -> [(City, Int)] -> [(City, Int)]
@@ -143,7 +91,7 @@ qsortfirst ::[(City, Int)] -> [(City, Int)]
 qsortfirst [] = []
 qsortfirst (x:xs) = qsortsecond x (qsortfirst xs) 
 
--- final-this function just filter the first cities with the highest degree 
+-- this function just filters the first cities with the highest degree 
 final :: [(City, Int)] -> [(City, Int)]
 final []=[]
 final (x1:x2:xs) = if(snd x1 == snd x2) then [x1] ++ final(x2:xs) else [x1]
@@ -208,17 +156,6 @@ isStronglyConnected rm = let cits=cities rm
                          in sch rm rm cits [] 
 
 --Function 8 
-{-
-possible_paths :: RoadMap -> [City ]-> City-> [City]-> [Path]
-possible_paths rm [] next visited= []
-possible_paths rm (a:adj) next visited   |(a==next) = []
-                                         |( a `elem` visited )= possible_paths  rm adj next visited
-                                         |otherwise possible_paths rm (map fst(adjacent rm a)) next (visited++[a])
--}
--- Function to find adjacent cities and distances from a given city in the roadmap
-
-
-
 
 infinity :: Distance
 infinity = maxBound `shiftR` 1
@@ -283,8 +220,94 @@ shortestPath roadmap start end =
     finalPaths = dijkstra [] distances paths
   in lookupPath end finalPaths
 
+--function 9
+
+adjacentCities :: RoadMap -> City -> [City]
+adjacentCities [] _ = []
+adjacentCities ((c1, c2, d):xs) k 
+    | k == c1 = [c2]++ adjacentCities xs k
+    | k == c2 = [c1]++ adjacentCities xs k
+    | otherwise = adjacentCities xs k
+
+
+
+noMaybe :: RoadMap -> City -> City -> Distance
+noMaybe rm c1 c2 = 
+    let maxV = maxBound :: Int
+    in case distance rm c1 c2 of
+        Nothing  -> maxV
+        Just value -> value 
+
+matrix :: RoadMap -> [[Distance]]
+matrix rm =
+    [[noMaybe rm c1 c2 | c2<- allCities] |c1<- allCities]
+  where
+    allCities = cities rm
+
+
+cityIndex :: [City] -> Data.Array.Array Int City
+cityIndex cts = Data.Array.array (0, length cts - 1) (zip [0..] cts)
+
+cityToIndex :: Data.Array.Array Int City -> City -> Maybe Int
+cityToIndex arr city = lookup city $ zip (Data.Array.elems arr) [0..]
+
+calcdist :: RoadMap -> Path -> Int -> [[Distance]] -> Data.Array.Array Int City -> Distance
+calcdist [] _ _ _ _ = 0
+calcdist rm [_] acc _ _ = acc
+calcdist rm [c1, c2] acc mx cityIdxArr = 
+    case (cityToIndex cityIdxArr c1, cityToIndex cityIdxArr c2) of
+        (Just idx1, Just idx2) ->
+            if (mx !! idx1 !! idx2) == (maxBound :: Int)
+                then maxBound :: Int
+            else acc + (mx !! idx1 !! idx2)
+        _ -> acc  
+calcdist rm (c1:c2:xs) acc mx cityIdxArr = 
+    case (cityToIndex cityIdxArr c1, cityToIndex cityIdxArr c2) of
+        (Just idx1, Just idx2) ->
+            if (mx !! idx1 !! idx2) == (maxBound :: Int)
+                then maxBound :: Int
+            else calcdist rm (c2:xs) (acc + mx !! idx1 !! idx2) mx cityIdxArr
+        _ -> acc
+
+
+pathDistanceHelper :: RoadMap -> Path -> Distance
+pathDistanceHelper rm p =
+    let mx = matrix rm
+        cityIdx = cityIndex (cities rm)
+    in calcdist rm p 0 mx cityIdx
+
+
+comparingX :: Ord a => (b -> a) -> b -> b -> Ordering
+comparingX f x y = compare (f x) (f y)
+
+aux:: RoadMap -> City -> [City] -> Path -> Path
+aux rm city seen p = 
+    let adj = filter (`notElem` seen) (adjacentCities rm city)
+    in
+    if null adj
+  --in if adj == []
+        then if areAdjacent rm city (head p)
+            then p ++ [head p]
+            else p ++ ["No Direct Connection"]
+        else
+        let paths = [aux rm nextCity (nextCity : seen) (p ++ [nextCity]) | nextCity <- adj]
+            validPaths = filter (not . null) paths 
+            finalPaths = filter (\p -> last p /= "No Direct Connection") validPaths 
+            l = length (cities rm)
+            f = filter (\x-> length x == (l+1)) finalPaths
+        in if null f then [] 
+
+            else Data.List.minimumBy (comparingX (\path -> pathDistanceHelper rm path)) f
+
+
 travelSales :: RoadMap -> Path
-travelSales = undefined
+travelSales rm =
+    if isStronglyConnected rm == False then []
+    else    
+    let allCities = cities rm 
+        h = head allCities
+    in aux rm h [h] [h] 
+
 
 
 
