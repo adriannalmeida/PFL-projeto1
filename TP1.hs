@@ -1,8 +1,9 @@
-import qualified Data.List
-import qualified Data.Map as Map
-import Data.Array (Array, (!), array, bounds, (//))
-import Data.Maybe (fromJust)
---import qualified Data.Bits
+
+import Data.Bits (shiftL, shiftR, (.&.), (.|.))
+import Data.List 
+import Data.Maybe (fromMaybe, isNothing)
+import Data.Ord (comparing)
+import Data.Array
 
 -- PFL 2024/2025 Practical assignment 1
 
@@ -214,73 +215,73 @@ possible_paths rm (a:adj) next visited   |(a==next) = []
                                          |( a `elem` visited )= possible_paths  rm adj next visited
                                          |otherwise possible_paths rm (map fst(adjacent rm a)) next (visited++[a])
 -}
---helper function that returns a list with the distance of the adjacente citys /vertexs
-distAdjacent:: RoadMap -> City-> [(City, Distance)]
-distAdjacent rm c1= [ (c2,d) | (c, c2, d)<- rm, c==c1]
+-- Function to find adjacent cities and distances from a given city in the roadmap
 
 
-type DistanceTable = Map.Map City Distance
-type TrueTable = Map.Map City Bool
 
-cityIndex :: [City] -> Map.Map City Int
-cityIndex cts = Map.fromList $ zip cts [0..]
 
-initialMatrix :: Int -> AdjacencyMatrix
-initialMatrix n = array ((0, 0), (n-1, n-1)) [((i, j), if i == j then 0 else maxBound) | i <- [0..n-1], j <- [0..n-1]]
+infinity :: Distance
+infinity = maxBound `shiftR` 1
 
-initialPathMatrix :: Int -> AdjacencyMatrix -> PathMatrix
-initialPathMatrix n adjMatrix = array ((0, 0), (n-1, n-1))
-    [((i, j), if adjMatrix ! (i, j) == maxBound || i == j then Nothing else Just j)
-    | i <- [0..n-1], j <- [0..n-1]]
+adjacent_ :: RoadMap -> City -> [(City, Distance)]
+adjacent_ [] _ = []
+adjacent_ ((c1, c2, d):xs) k 
+    | k == c1 = (c2, d) : adjacent_ xs k
+    | k == c2 = (c1, d) : adjacent_ xs k
+    | otherwise = adjacent_ xs k
 
-populateMatrix :: AdjacencyMatrix -> RoadMap -> Map.Map City Int -> AdjacencyMatrix
-populateMatrix matrix roadmap cityIndex = matrix // updates
-  where
-    updates = [((cityIndex Map.! c1, cityIndex Map.! c2), d) 
-              | (c1, c2, d) <- roadmap] ++
-              [((cityIndex Map.! c2, cityIndex Map.! c1), d) 
-              | (c1, c2, d) <- roadmap]
-
-genAdjacencyMatrix :: RoadMap -> AdjacencyMatrix
-genAdjacencyMatrix rm = 
-    let cts = cities rm
-        index = cityIndex cts
-        n = length cts
-        emptyMatrix = initialMatrix n
-    in populateMatrix emptyMatrix rm index
-
-floydWarshall :: Int -> AdjacencyMatrix -> (AdjacencyMatrix, PathMatrix)
-floydWarshall n adjMatrix = foldl update (adjMatrix, initialPathMatrix n adjMatrix) [0..n-1]
-  where
-    update (dist, path) k = 
-        (array (bounds dist) updated, array (bounds path) updatedPath)
-      where
-        updated = [((i, j), min (dist ! (i, j)) (dist ! (i, k) + dist ! (k, j))) 
-                   | i <- [0..n-1], j <- [0..n-1]]
-        updatedPath = [((i, j),
-                        if dist ! (i, j) <= dist ! (i, k) + dist ! (k, j)
-                        then path ! (i, j)
-                        else Just k)  -- fix: update path to use `k` as intermediate
-                       | i <- [0..n-1], j <- [0..n-1]]
-
-reconstructPath :: PathMatrix -> Int -> Int -> [Int]  
-reconstructPath pathMatrix source end 
-    | source == end = [source]
-    | pathMatrix ! (source, end) == Nothing = []
-    | otherwise = source : reconstructPath pathMatrix (fromJust (pathMatrix ! (source, end))) end
+findClosest :: [(City, Distance)] -> [City] -> Maybe (City, Distance)
+findClosest distances visited =
+    let unvisitedDistances = filter (\(city, _) -> city `notElem` visited) distances
+    in if null unvisitedDistances then Nothing else Just $ minimumBy (comparing snd) unvisitedDistances
 
 shortestPath :: RoadMap -> City -> City -> Path
-shortestPath rm source end = 
-    let adjMatrix = genAdjacencyMatrix rm
-        (distMatrix, pathMatrix) = floydWarshall (length cts) adjMatrix
-        index = cityIndex cts
-        sourceIndex = index Map.! source
-        endIndex = index Map.! end
-    in map (cts !!) (reconstructPath pathMatrix sourceIndex endIndex)
-  where 
-    cts = cities rm
+shortestPath roadmap start end =
+  let
+    cities = uniqueCities roadmap
+    distances = [(city, if city == start then 0 else infinity) | city <- cities]
+    paths = [(city, if city == start then [start] else []) | city <- cities]
+    
+    dijkstra :: [City] -> [(City, Distance)] -> [(City, Path)] -> [(City, Path)]
+    dijkstra visited distList pathList
+      | any (\(c, _) -> c == end && c `elem` visited) distList = pathList
+      | otherwise =
+          case findClosest distList visited of
+            Nothing -> pathList
+            Just (currentCity, currentDist) ->
+              let
+                  newVisited = currentCity : visited
+                  neighbors = adjacent_ roadmap currentCity
+                  
+                  (newDistList, newPathList) = foldl' (updateDistances currentCity currentDist) (distList, pathList) neighbors
+              in dijkstra newVisited newDistList newPathList
 
+    updateDistances :: City -> Distance -> ([(City, Distance)], [(City, Path)]) -> (City, Distance) -> ([(City, Distance)], [(City, Path)])
+    updateDistances currentCity currentDist (distList, pathList) (neighbor, dist) =
+      let newDist = currentDist + dist
+          oldDist = lookupList neighbor distList
+      in if newDist < oldDist
+         then (updateList neighbor newDist distList, updatePath neighbor (lookupPath currentCity pathList ++ [neighbor]) pathList)
+         else (distList, pathList)
 
+    lookupList :: City -> [(City, Distance)] -> Distance
+    lookupList city = fromMaybe infinity . lookup city
+
+    lookupPath :: City -> [(City, Path)] -> Path
+    lookupPath city = fromMaybe [] . lookup city
+
+    updateList :: City -> Distance -> [(City, Distance)] -> [(City, Distance)]
+    updateList city newDist = map (\(c, d) -> if c == city then (c, newDist) else (c, d))
+
+    updatePath :: City -> Path -> [(City, Path)] -> [(City, Path)]
+    updatePath city newPath = map (\(c, p) -> if c == city then (c, newPath) else (c, p))
+
+    uniqueCities :: RoadMap -> [City]
+    uniqueCities roads = foldl' (\acc (c1, c2, _) -> acc `union` [c1, c2]) [] roads
+      where
+        union xs ys = xs ++ [y | y <- ys, y `notElem` xs]
+    finalPaths = dijkstra [] distances paths
+  in lookupPath end finalPaths
 
 travelSales :: RoadMap -> Path
 travelSales = undefined
@@ -289,7 +290,20 @@ travelSales = undefined
 
 
 gTest1 :: RoadMap
-gTest1 = [("7","6",1),("8","2",2),("6","5",2),("0","1",4),("2","5",4),("8","6",6),("2","3",7),("7","8",7),("0","7",8),("1","2",8),("3","4",9),("5","4",10),("1","7",11),("3","5",14)]
+gTest1 = [("7","6",1),
+            ("8","2",2),
+            ("6","5",2),
+            ("0","1",4),
+            ("2","5",4),
+            ("8","6",6),
+            ("2","3",7),
+            ("7","8",7),
+            ("0","7",8),
+            ("1","2",8),
+            ("3","4",9),
+            ("5","4",10),
+            ("1","7",11)
+            ,("3","5",14)]
 
 gTest2 :: RoadMap
 gTest2 = [("0","1",10),("0","2",15),("0","3",20),("1","2",35),("1","3",25),("2","3",30)]
