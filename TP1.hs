@@ -93,50 +93,18 @@ qsortfirst (x:xs) = qsortsecond x (qsortfirst xs)
 
 -- this function just filters the first cities with the highest degree 
 final :: [(City, Int)] -> [(City, Int)]
-final []=[]
-final (x1:x2:xs) = if(snd x1 == snd x2) then [x1] ++ final(x2:xs) else [x1]
+final [] = []
+final [x] = [x]
+final (x1:x2:xs) =
+    if snd x1 == snd x2
+    then x1 : final (x2:xs)
+    else [x1]
 
 -- rome 
 rome :: RoadMap -> [City]
 rome rm = reverse( map fst ( final (reverse (qsortfirst (degree rm c ) )) ))
         where c =cities rm 
             
-      
-
--- DEPOIS SUBSTITUIR PELA FUNÇÃO 4
-{-adjacent :: RoadMap -> City -> [City]
-adjacent rm city = [c2 | (c1, c2, _) <- rm, c1 == city] ++ [c1 | (c1, c2, _) <- rm, c2 == city]
--}
-{-
--- preciso melhorar not very efficient 
-addToVisited :: [City] -> [City] -> [City]
-addToVisited [] visited = visited 
-addToVisited (x:xs) visited =  if x `elem` visited 
-    then addToVisited xs visited
-    else addToVisited xs (x:visited)
-
-
-scc :: RoadMap -> [City] -> [City] -> Bool
-scc rm [] visited = (length (cities rm)) == (length visited) --se o tamanho de rm for igual ao dos visited então é scc
-scc rm (city:xs) visited = 
-                            let 
-                                adj = map fst (adjacent rm city)
-                                newVisited = addToVisited adj visited 
-                                newToExplore = filter (`notElem` visited) adj ++ xs
-                            in 
-                                scc rm newToExplore newVisited 
-
--- necessário??
-first :: (City, City, Distance) -> City
-first (c1, _, _) = c1  
-
-isStronglyConnected :: RoadMap -> Bool
-isStronglyConnected [] = False
-isStronglyConnected ((c1,b,c):rm) = let city = first (head rm) in scc rm [city] [city]
--}
-
---Function 7 
---tentei por menos chatgpt
 
 addvisited ::[City] -> [City] -> [City]
 addvisited [] visited = visited
@@ -172,14 +140,14 @@ findClosest distances visited =
     let unvisitedDistances = filter (\(city, _) -> city `notElem` visited) distances
     in if null unvisitedDistances then Nothing else Just $ minimumBy (comparing snd) unvisitedDistances
 
-shortestPath :: RoadMap -> City -> City -> Path
-shortestPath roadmap start end =
+shortestPath :: RoadMap -> City -> City -> [Path]
+shortestPath rm start end =
   let
-    cities = uniqueCities roadmap
-    distances = [(city, if city == start then 0 else infinity) | city <- cities]
-    paths = [(city, if city == start then [start] else []) | city <- cities]
+    allCities = cities rm
+    distances = [(city, if city == start then 0 else infinity) | city <- allCities]
+    paths = [(city, if city == start then [[start]] else []) | city <- allCities]  -- Track all paths as [[Path]]
     
-    dijkstra :: [City] -> [(City, Distance)] -> [(City, Path)] -> [(City, Path)]
+    dijkstra :: [City] -> [(City, Distance)] -> [(City, [Path])] -> [(City, [Path])]
     dijkstra visited distList pathList
       | any (\(c, _) -> c == end && c `elem` visited) distList = pathList
       | otherwise =
@@ -188,35 +156,33 @@ shortestPath roadmap start end =
             Just (currentCity, currentDist) ->
               let
                   newVisited = currentCity : visited
-                  neighbors = adjacent_ roadmap currentCity
+                  neighbors = adjacent_ rm currentCity
                   
                   (newDistList, newPathList) = foldl' (updateDistances currentCity currentDist) (distList, pathList) neighbors
               in dijkstra newVisited newDistList newPathList
 
-    updateDistances :: City -> Distance -> ([(City, Distance)], [(City, Path)]) -> (City, Distance) -> ([(City, Distance)], [(City, Path)])
+    updateDistances :: City -> Distance -> ([(City, Distance)], [(City, [Path])]) -> (City, Distance) -> ([(City, Distance)], [(City, [Path])])
     updateDistances currentCity currentDist (distList, pathList) (neighbor, dist) =
       let newDist = currentDist + dist
           oldDist = lookupList neighbor distList
-      in if newDist < oldDist
-         then (updateList neighbor newDist distList, updatePath neighbor (lookupPath currentCity pathList ++ [neighbor]) pathList)
-         else (distList, pathList)
+          currentPaths = lookupPath currentCity pathList
+      in case compare newDist oldDist of
+           LT -> (updateList neighbor newDist distList, updatePath neighbor (map (++ [neighbor]) currentPaths) pathList)
+           EQ -> (distList, updatePath neighbor (lookupPath neighbor pathList ++ map (++ [neighbor]) currentPaths) pathList)
+           GT -> (distList, pathList)
 
     lookupList :: City -> [(City, Distance)] -> Distance
     lookupList city = fromMaybe infinity . lookup city
 
-    lookupPath :: City -> [(City, Path)] -> Path
+    lookupPath :: City -> [(City, [Path])] -> [Path]
     lookupPath city = fromMaybe [] . lookup city
 
     updateList :: City -> Distance -> [(City, Distance)] -> [(City, Distance)]
     updateList city newDist = map (\(c, d) -> if c == city then (c, newDist) else (c, d))
 
-    updatePath :: City -> Path -> [(City, Path)] -> [(City, Path)]
-    updatePath city newPath = map (\(c, p) -> if c == city then (c, newPath) else (c, p))
+    updatePath :: City -> [Path] -> [(City, [Path])] -> [(City, [Path])]
+    updatePath city newPaths = map (\(c, p) -> if c == city then (c, newPaths) else (c, p))
 
-    uniqueCities :: RoadMap -> [City]
-    uniqueCities roads = foldl' (\acc (c1, c2, _) -> acc `union` [c1, c2]) [] roads
-      where
-        union xs ys = xs ++ [y | y <- ys, y `notElem` xs]
     finalPaths = dijkstra [] distances paths
   in lookupPath end finalPaths
 
@@ -332,3 +298,5 @@ gTest2 :: RoadMap
 gTest2 = [("0","1",10),("0","2",15),("0","3",20),("1","2",35),("1","3",25),("2","3",30)]
 gTest3 :: RoadMap -- unconnected graph
 gTest3 = [("0","1",4),("2","3",2)]
+gTest4 :: RoadMap
+gTest4 = [("0", "1", 15), ("0", "2", 20), ("1","2", 10)]
