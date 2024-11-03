@@ -1,5 +1,7 @@
 import qualified Data.List
---import qualified Data.Array
+import qualified Data.Map as Map
+import Data.Array (Array, (!), array, bounds, (//))
+import Data.Maybe (fromJust)
 --import qualified Data.Bits
 
 -- PFL 2024/2025 Practical assignment 1
@@ -11,6 +13,9 @@ type Path = [City]
 type Distance = Int
 
 type RoadMap = [(City,City,Distance)]
+
+type AdjacencyMatrix = Array(Int,Int) Distance
+type PathMatrix =  Array(Int, Int) (Maybe Int)
 
 
 --versão mega eficiente do chat gpt não entidi um caralho
@@ -103,6 +108,8 @@ oneWayDistance [] _ _ = Nothing
 oneWayDistance ((c1, c2, d):xs) s e = if  oneWayAdjacent [(c1, c2, d)] s e then Just d
 else oneWayDistance xs s e --}
 
+--Function 5 
+
 dist :: RoadMap -> Path -> Int -> Maybe Distance
 dist [] _ _ = Nothing
 dist rm [_] acc = Just acc
@@ -113,11 +120,8 @@ dist rm (c1:c2:xs) acc = case distance rm c1 c2 of
     Nothing -> Nothing
     Just d -> dist rm (c2:xs) (acc+d)
 
---Function 5 
-
 pathDistance :: RoadMap -> Path -> Maybe Distance
 pathDistance rmap city = dist rmap city 0
-
 
 
 --Function 6 
@@ -191,24 +195,92 @@ addvisited (a:adj) visited =
     if(a `notElem` visited) then [a] ++ (addvisited adj visited)
     else addvisited adj visited
                              
-                                                                    
-
 sch :: RoadMap -> RoadMap -> [City] -> [City] -> Bool
 sch rm [] citys visited = if(citys/= visited) then False else True
 sch rm ((a,b,d):xs) citys visited = if ((length (cities rm ))==length visited) then True
-                                     else sch rm xs citys (addvisited adj visited) 
-                                        where adj= map fst ( adjacent rm a )
+                                    else sch rm xs citys (addvisited adj visited) 
+                                    where adj= map fst ( adjacent rm a )
                                                                              
 isStronglyConnected :: RoadMap -> Bool
 isStronglyConnected [] = False
 isStronglyConnected rm = let cits=cities rm  
                          in sch rm rm cits [] 
 
+--Function 8 
+{-
+possible_paths :: RoadMap -> [City ]-> City-> [City]-> [Path]
+possible_paths rm [] next visited= []
+possible_paths rm (a:adj) next visited   |(a==next) = []
+                                         |( a `elem` visited )= possible_paths  rm adj next visited
+                                         |otherwise possible_paths rm (map fst(adjacent rm a)) next (visited++[a])
+-}
+--helper function that returns a list with the distance of the adjacente citys /vertexs
+distAdjacent:: RoadMap -> City-> [(City, Distance)]
+distAdjacent rm c1= [ (c2,d) | (c, c2, d)<- rm, c==c1]
 
 
+type DistanceTable = Map.Map City Distance
+type TrueTable = Map.Map City Bool
 
-shortestPath :: RoadMap -> City -> City -> [Path]
-shortestPath = undefined
+cityIndex :: [City] -> Map.Map City Int
+cityIndex cts = Map.fromList $ zip cts [0..]
+
+initialMatrix :: Int -> AdjacencyMatrix
+initialMatrix n = array ((0, 0), (n-1, n-1)) [((i, j), if i == j then 0 else maxBound) | i <- [0..n-1], j <- [0..n-1]]
+
+initialPathMatrix :: Int -> AdjacencyMatrix -> PathMatrix
+initialPathMatrix n adjMatrix = array ((0, 0), (n-1, n-1))
+    [((i, j), if adjMatrix ! (i, j) == maxBound || i == j then Nothing else Just j)
+    | i <- [0..n-1], j <- [0..n-1]]
+
+populateMatrix :: AdjacencyMatrix -> RoadMap -> Map.Map City Int -> AdjacencyMatrix
+populateMatrix matrix roadmap cityIndex = matrix // updates
+  where
+    updates = [((cityIndex Map.! c1, cityIndex Map.! c2), d) 
+              | (c1, c2, d) <- roadmap] ++
+              [((cityIndex Map.! c2, cityIndex Map.! c1), d) 
+              | (c1, c2, d) <- roadmap]
+
+genAdjacencyMatrix :: RoadMap -> AdjacencyMatrix
+genAdjacencyMatrix rm = 
+    let cts = cities rm
+        index = cityIndex cts
+        n = length cts
+        emptyMatrix = initialMatrix n
+    in populateMatrix emptyMatrix rm index
+
+floydWarshall :: Int -> AdjacencyMatrix -> (AdjacencyMatrix, PathMatrix)
+floydWarshall n adjMatrix = foldl update (adjMatrix, initialPathMatrix n adjMatrix) [0..n-1]
+  where
+    update (dist, path) k = 
+        (array (bounds dist) updated, array (bounds path) updatedPath)
+      where
+        updated = [((i, j), min (dist ! (i, j)) (dist ! (i, k) + dist ! (k, j))) 
+                   | i <- [0..n-1], j <- [0..n-1]]
+        updatedPath = [((i, j),
+                        if dist ! (i, j) <= dist ! (i, k) + dist ! (k, j)
+                        then path ! (i, j)
+                        else path ! (i, k)) 
+                       | i <- [0..n-1], j <- [0..n-1]]
+
+reconstructPath :: PathMatrix -> Int -> Int -> [Int]  
+reconstructPath pathMatrix source end 
+    | source == end = [source]
+    | pathMatrix ! (source, end) == Nothing = []
+    | otherwise = source : reconstructPath pathMatrix (fromJust (pathMatrix ! (source, end))) end
+
+shortestPath :: RoadMap -> City -> City -> Path
+shortestPath rm source end = 
+    let adjMatrix = genAdjacencyMatrix rm
+        (distMatrix, pathMatrix) = floydWarshall (length cts) adjMatrix
+        index = cityIndex cts
+        sourceIndex = index Map.! source
+        endIndex = index Map.! end
+    in map (cts !!) (reconstructPath pathMatrix sourceIndex endIndex)
+  where 
+    cts = cities rm
+
+
 
 travelSales :: RoadMap -> Path
 travelSales = undefined
