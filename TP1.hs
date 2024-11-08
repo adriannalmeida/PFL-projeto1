@@ -1,6 +1,6 @@
 
 import Data.Bits (shiftL, shiftR, (.&.), (.|.))
-import Data.List 
+import Data.List
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Ord (comparing)
 import Data.Array
@@ -218,8 +218,6 @@ possible_paths rm (a:adj) next visited   |(a==next) = []
 -- Function to find adjacent cities and distances from a given city in the roadmap
 
 
-
-
 infinity :: Distance
 infinity = maxBound `shiftR` 1
 
@@ -238,13 +236,16 @@ findClosest distances visited =
 shortestPath :: RoadMap -> City -> City -> Path
 shortestPath roadmap start end =
   let
-    cities = uniqueCities roadmap
-    distances = [(city, if city == start then 0 else infinity) | city <- cities]
-    paths = [(city, if city == start then [start] else []) | city <- cities]
-    
+    cts = cities roadmap
+    distances = [(city, if city == start then 0 else infinity) | city <- cts]
+    paths = [(city, if city == start then [start] else []) | city <- cts]  
+
     dijkstra :: [City] -> [(City, Distance)] -> [(City, Path)] -> [(City, Path)]
+
     dijkstra visited distList pathList
+    
       | any (\(c, _) -> c == end && c `elem` visited) distList = pathList
+
       | otherwise =
           case findClosest distList visited of
             Nothing -> pathList
@@ -276,8 +277,6 @@ shortestPath roadmap start end =
     updatePath :: City -> Path -> [(City, Path)] -> [(City, Path)]
     updatePath city newPath = map (\(c, p) -> if c == city then (c, newPath) else (c, p))
 
-    uniqueCities :: RoadMap -> [City]
-    uniqueCities roads = foldl' (\acc (c1, c2, _) -> acc `union` [c1, c2]) [] roads
       where
         union xs ys = xs ++ [y | y <- ys, y `notElem` xs]
     finalPaths = dijkstra [] distances paths
@@ -285,6 +284,7 @@ shortestPath roadmap start end =
 
 travelSales :: RoadMap -> Path
 travelSales = undefined
+
 
 
 
